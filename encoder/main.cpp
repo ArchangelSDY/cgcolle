@@ -32,6 +32,7 @@ static bool parseArgs(int argc, char **argv, po::variables_map &vm)
         ("src,s", po::value<std::string>(), "source directory")
         ("output,o", po::value<std::string>(), "output file")
         ("pattern,p", po::value<std::string>(), "name pattern")
+        ("dry-run,n", "dry run")
         ;
 
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -72,6 +73,33 @@ static bool scanImages(const std::string &src, std::vector<std::string> &imagePa
     return true;
 }
 
+class Workspace
+{
+public:
+    Workspace(const std::string &srcPath)
+    {
+        boost::filesystem::path workDir(srcPath);
+        m_workDir = workDir.append("cgcolle");
+
+        if (!boost::filesystem::exists(m_workDir)) {
+            boost::filesystem::create_directory(m_workDir);
+        }
+    }
+
+    ~Workspace()
+    {
+        boost::filesystem::remove_all(m_workDir);
+    }
+
+    std::string directory() const
+    {
+        return m_workDir.string();
+    }
+
+private:
+    boost::filesystem::path m_workDir;
+};
+
 int main(int argc, char **argv)
 {
     po::variables_map vm;
@@ -88,7 +116,12 @@ int main(int argc, char **argv)
     std::string pattern = vm["pattern"].as<std::string>();
     std::cout << "[Info] Name pattern: " << pattern << std::endl;
 
-    // Load image paths
+    if (!boost::filesystem::exists(src)) {
+        std::cout << "[ERROR] Source directory does not exist" << std::endl;
+        return 1;
+    }
+
+    // Step 1: Load image paths
     std::vector<std::string> imagePaths;
     if (!scanImages(src, imagePaths)) {
         std::cout << "[ERROR] Fail to scan source images" << std::endl;
@@ -97,13 +130,8 @@ int main(int argc, char **argv)
 
     std::cout << "[Info] Total " << imagePaths.size() << " images" << std::endl;
 
-    // Create working directory
-    boost::filesystem::path workDir(src);
-    workDir.append("cgcolle");
-    if (!boost::filesystem::create_directory(workDir)) {
-        std::cout << "[ERROR] Fail to create working directory: " << workDir.string() << std::endl;
-        return 1;
-    }
+    // Create workspace
+    Workspace workspace(src);
 
     if (imagePaths.empty()) {
         std::cout << "[WARN] Empty image set" << std::endl;
@@ -112,15 +140,21 @@ int main(int argc, char **argv)
 
     std::cout << "[Info] Grouping..." << std::endl;
 
-    // Group images
+    // Step 2: Group images
     std::unique_ptr<cgcolle::encoder::ImageGrouper>  grouper(new cgcolle::encoder::NameImageGrouper(pattern));
     std::vector<cgcolle::encoder::ImageGroup *> groups = grouper->group(imagePaths);
 
     std::cout << "[Info] Groups count " << groups.size() << std::endl;
+
+    if (vm.count("dry-run")) {
+        std::cout << "[Info] Dry run. Now exiting." << std::endl;
+        return 0;
+    }
+
     std::cout << "[Info] Diffing frames..." << std::endl;
 
-    // Generate sub frames
-    cgcolle::encoder::ImageDiffGenerator diffGen(workDir.string());
+    // Step 3: Generate sub frames
+    cgcolle::encoder::ImageDiffGenerator diffGen(workspace.directory());
 
     uint32_t id = 0;
     for (auto it = groups.begin(); it != groups.end(); it++) {
@@ -143,13 +177,9 @@ int main(int argc, char **argv)
 
     std::cout << "[Info] Muxing..." << std::endl;
 
-    // Package
+    // Step 4: Package
     cgcolle::encoder::ImageMux mux(output);
     mux.writeGroups(groups);
-
-    // Clear working directory
-    // TODO: Check error
-    boost::filesystem::remove_all(workDir);
 
     std::cout << "[Info] Done." << std::endl;
 
