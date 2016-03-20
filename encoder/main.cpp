@@ -133,6 +133,9 @@ int main(int argc, char **argv)
 
     std::cout << "[Info] Total " << imagePaths.size() << " images" << std::endl;
 
+    // Sort by name
+    std::sort(imagePaths.begin(), imagePaths.end());
+
     // Create workspace
     Workspace workspace(src);
 

@@ -25,7 +25,14 @@ void ImageDiffGenerator::generate(ImageGroup *group)
         cv::Mat subFrameImg = cv::imread(subFramePath);
 
         cv::Mat diffFrameImg;
-        cv::bitwise_xor(mainFrameImg, subFrameImg, diffFrameImg);
+
+        try {
+            cv::bitwise_xor(mainFrameImg, subFrameImg, diffFrameImg);
+        }
+        catch (const cv::Exception &ex) {
+            std::cout << "[ERROR] Failed to generate sub frame diff for " << subFramePath << " due to error: " << ex.msg << std::endl;
+            continue;
+        }
 
         boost::filesystem::path diffFrameOutputPath = toWorkspacePath((*it)->name);
         cv::imwrite(diffFrameOutputPath.string(), diffFrameImg);
