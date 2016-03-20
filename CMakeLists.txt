@@ -6,7 +6,7 @@ project (cgcolle VERSION 0.1.0)
 
 set(Boost_USE_STATIC_LIBS TRUE)
 
-find_package(Boost COMPONENTS date_time filesystem locale program_options regex system REQUIRED)
+find_package(Boost COMPONENTS chrono date_time filesystem locale program_options regex system thread REQUIRED)
 find_package(OpenCV REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})

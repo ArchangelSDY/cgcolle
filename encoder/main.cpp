@@ -3,8 +3,11 @@
 #include <string>
 #include <vector>
 
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
+#include <boost/thread/thread.hpp>
 
 #include "ImageDiffGenerator.h"
 #include "ImageMux.h"
@@ -156,12 +159,27 @@ int main(int argc, char **argv)
     // Step 3: Generate sub frames
     cgcolle::encoder::ImageDiffGenerator diffGen(workspace.directory());
 
+    boost::asio::io_service diffService;
+    boost::thread_group diffThreadPool;
+    boost::asio::io_service::work diffWork(diffService);
+
+    uint32_t concurrency = boost::thread::hardware_concurrency();
+    std::cout << "[Info] Using " << concurrency << " CPU cores" << std::endl;
+
+    for (uint32_t i = 0; i < concurrency; ++i) {
+        diffThreadPool.create_thread(boost::bind(&boost::asio::io_service::run, &diffService));
+    }
+
+    for (cgcolle::encoder::ImageGroup *group : groups) {
+        diffService.post(boost::bind(&cgcolle::encoder::ImageDiffGenerator::generate, boost::ref(diffGen), group));
+    }
+
+    diffService.stop();
+    diffThreadPool.join_all();
+
+    // Step 4: Assign id to each frame
     uint32_t id = 0;
-    for (auto it = groups.begin(); it != groups.end(); it++) {
-        cgcolle::encoder::ImageGroup *group = *it;
-
-        diffGen.generate(group);
-
+    for (cgcolle::encoder::ImageGroup *group : groups) {
         uint32_t mainFrameId = id;
         group->mainFrame->mainFrameId = id;
         for (int i = 0; i < group->subFrames.size(); ++i) {
@@ -177,7 +195,7 @@ int main(int argc, char **argv)
 
     std::cout << "[Info] Muxing..." << std::endl;
 
-    // Step 4: Package
+    // Step 5: Package
     cgcolle::encoder::ImageMux mux(output);
     mux.writeGroups(groups);
 
