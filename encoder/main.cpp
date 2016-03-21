@@ -12,6 +12,7 @@
 #include "ImageDiffGenerator.h"
 #include "ImageMux.h"
 #include "NameImageGrouper.h"
+#include "SimilarityImageGrouper.h"
 
 namespace po = boost::program_options;
 
@@ -35,6 +36,7 @@ static bool parseArgs(int argc, char **argv, po::variables_map &vm)
         ("src,s", po::value<std::string>(), "source directory")
         ("output,o", po::value<std::string>(), "output file")
         ("pattern,p", po::value<std::string>(), "name pattern")
+        ("similarity", "group by similarity")
         ("dry-run,n", "dry run")
         ;
 
@@ -56,12 +58,30 @@ static bool parseArgs(int argc, char **argv, po::variables_map &vm)
         return false;
     }
 
-    if (!vm.count("pattern")) {
-        std::cout << "Missing name pattern" << std::endl;
-        return false;
-    }
-
     return true;
+}
+
+cgcolle::encoder::ImageGrouper *createImageGrouper(const po::variables_map &vm)
+{
+    if (vm.count("pattern")) {
+        std::string pattern = vm["pattern"].as<std::string>();
+        std::cout << "[Info] Group by name pattern: " << pattern << std::endl;
+
+        return new cgcolle::encoder::NameImageGrouper(pattern);
+    } else if (vm.count("similarity")) {
+        std::cout << "[Info] Group by similarity" << std::endl;
+        return new cgcolle::encoder::SimilarityImageGrouper();
+    } else {
+        return nullptr;
+    }
+}
+
+static bool isValidImageFile(const boost::filesystem::path &path)
+{
+    const std::string ext = path.extension().string();
+    return ext == ".bmp"
+        || ext == ".jpg"
+        || ext == ".png";
 }
 
 static bool scanImages(const std::string &src, std::vector<std::string> &imagePaths)
@@ -69,8 +89,12 @@ static bool scanImages(const std::string &src, std::vector<std::string> &imagePa
     boost::filesystem::path srcPath(src);
     boost::filesystem::directory_iterator iter(srcPath);
     for (; iter != boost::filesystem::end(iter); iter++) {
-        std::cout << "[Info] Found image: " << iter->path().string() << std::endl;
-        imagePaths.push_back(iter->path().string());
+        const boost::filesystem::path &path = iter->path();
+
+        if (boost::filesystem::is_regular_file(path) && isValidImageFile(path)) {
+            std::cout << "[Info] Found image: " << path.string() << std::endl;
+            imagePaths.push_back(path.string());
+        }
     }
 
     return true;
@@ -116,9 +140,6 @@ int main(int argc, char **argv)
     std::string output = vm["output"].as<std::string>();
     std::cout << "[Info] Output file: " << output << std::endl;
 
-    std::string pattern = vm["pattern"].as<std::string>();
-    std::cout << "[Info] Name pattern: " << pattern << std::endl;
-
     if (!boost::filesystem::exists(src)) {
         std::cout << "[ERROR] Source directory does not exist" << std::endl;
         return 1;
@@ -147,7 +168,11 @@ int main(int argc, char **argv)
     std::cout << "[Info] Grouping..." << std::endl;
 
     // Step 2: Group images
-    std::unique_ptr<cgcolle::encoder::ImageGrouper>  grouper(new cgcolle::encoder::NameImageGrouper(pattern));
+    std::unique_ptr<cgcolle::encoder::ImageGrouper> grouper(createImageGrouper(vm));
+    if (!grouper) {
+        std::cout << "[ERROR] Missing image grouper" << std::endl;
+        return 1;
+    }
     std::vector<cgcolle::encoder::ImageGroup *> groups = grouper->group(imagePaths);
 
     std::cout << "[Info] Groups count " << groups.size() << std::endl;

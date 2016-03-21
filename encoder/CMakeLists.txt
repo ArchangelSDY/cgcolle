@@ -2,6 +2,7 @@ set(ENCODER_SRCS
     "ImageDiffGenerator.cpp"
     "ImageMux.cpp"
     "NameImageGrouper.cpp"
+    "SimilarityImageGrouper.cpp"
     "main.cpp"
 )
 
