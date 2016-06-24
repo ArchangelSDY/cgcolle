@@ -1,6 +1,7 @@
 #include "ImageMux.h"
 
 #include <fstream>
+#include <iostream>
 #include <boost/filesystem.hpp>
 
 using namespace cgcolle::encoder;
@@ -55,12 +56,18 @@ void ImageMux::writeMetaChunk(std::ofstream &output, const std::vector<ImageGrou
 
         writeMetaImage(output, group->mainFrame);
 
+        size_t errImageCount = 0;
         for (auto sit = group->subFrames.begin(); sit != group->subFrames.end(); sit++) {
             const cgcolle::ImageEntry *subFrame = *sit;
-            writeMetaImage(output, subFrame);
+            if (!subFrame->isError) {
+                writeMetaImage(output, subFrame);
+            } else {
+                errImageCount += 1;
+                std::cout << "[WARN] Muxer skipping error frame: " << subFrame->name << std::endl;
+            }
         }
 
-        imageCount += static_cast<uint32_t>(1 + group->subFrames.size());
+        imageCount += static_cast<uint32_t>(1 + group->subFrames.size() - errImageCount);
     }
 
     std::streamoff metaEndPos = output.tellp();
@@ -115,7 +122,9 @@ void ImageMux::writeDataChunk(std::ofstream &output, const std::vector<ImageGrou
 
         for (auto sit = group->subFrames.begin(); sit != group->subFrames.end(); sit++) {
             const cgcolle::ImageEntry *subFrame = *sit;
-            writeDataImage(output, subFrame);
+            if (!subFrame->isError) {
+                writeDataImage(output, subFrame);
+            }
         }
     }
 
@@ -140,7 +149,8 @@ void ImageMux::writeDataImage(std::ofstream &output, const cgcolle::ImageEntry *
     std::fstream imageFile;
     imageFile.open(image->path, std::fstream::in | std::fstream::binary);
 
-    output << imageFile.rdbuf();
-
-    imageFile.close();
+    if (!imageFile.fail()) {
+        output << imageFile.rdbuf();
+        imageFile.close();
+    }
 }

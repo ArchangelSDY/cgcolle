@@ -31,6 +31,7 @@ void ImageDiffGenerator::generate(ImageGroup *group)
         }
         catch (const cv::Exception &ex) {
             std::cout << "[ERROR] Failed to generate sub frame diff for " << subFramePath << " due to error: " << ex.msg << std::endl;
+            (*it)->isError = true;
             continue;
         }
 

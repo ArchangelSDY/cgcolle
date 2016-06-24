@@ -7,6 +7,7 @@ ImageEntry::ImageEntry(const std::string &name, const std::string &path) :
     path(path) ,
     mainFrameId(0) ,
     size(0) ,
-    offset(0)
+    offset(0) ,
+    isError(false)
 {
 }

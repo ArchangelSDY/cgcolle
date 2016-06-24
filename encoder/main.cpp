@@ -211,10 +211,13 @@ int main(int argc, char **argv)
         uint32_t mainFrameId = id;
         group->mainFrame->mainFrameId = id;
         for (int i = 0; i < group->subFrames.size(); ++i) {
-            group->subFrames[i]->mainFrameId = mainFrameId;
+            cgcolle::ImageEntry *frame = group->subFrames[i];
+            if (!frame->isError) {
+                group->subFrames[i]->mainFrameId = mainFrameId;
 
-            // Count one sub frame
-            id++;
+                // Count one sub frame
+                id++;
+            }
         }
 
         // Count one main frame

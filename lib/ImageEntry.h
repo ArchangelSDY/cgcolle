@@ -14,5 +14,6 @@ namespace cgcolle
         uint32_t mainFrameId;
         uint32_t size;
         uint32_t offset;
+        bool isError;
     };
 }
