@@ -77,6 +77,12 @@ MainWindow::MainWindow(QWidget *parent) :
         rule->fromEditString(ui->editCompositeRule->toPlainText());
         ui->editCompositeRule->setPlainText(rule->toEditString());
     });
+
+
+
+
+    // Temp
+    CGColleV1File file("E:\\test.cgc");
 }
 
 MainWindow::~MainWindow()
@@ -95,8 +101,8 @@ void MainWindow::openFile()
 
     ui->listEntries->clear();
     const QList<CGColleV1Entry> &entries = m_file->entrys();
-    for (const auto &entry : entries) {
-        ui->listEntries->addItem(entry.name);
+    for (int i = 0; i < entries.count(); i++) {
+        ui->listEntries->addItem(QString("(%1) %2").arg(i).arg(entries[i].name));
     }
 
     ui->listCompositeRules->clear();

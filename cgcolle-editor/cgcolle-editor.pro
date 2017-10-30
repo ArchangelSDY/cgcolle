@@ -29,14 +29,17 @@ SOURCES += \
     CGColleV1File.cpp \
     CGColleV1Entry.cpp \
     CGColleV1CompositeRule.cpp \
-    CGColleV1CartesianProductRule.cpp
+    CGColleV1CartesianProductRule.cpp \
+    CGColleV1StaticRule.cpp
 
 HEADERS += \
         MainWindow.h \
     CGColleV1File.h \
     CGColleV1Entry.h \
     CGColleV1CompositeRule.h \
-    CGColleV1CartesianProductRule.h
+    CGColleV1CartesianProductRule.h \
+    CGColleV1StaticRule.h \
+    ReadWriteUtils.h
 
 FORMS += \
         MainWindow.ui

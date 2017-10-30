@@ -4,9 +4,14 @@
 #include <QImage>
 
 #include "CGColleV1CartesianProductRule.h"
+#include "CGColleV1StaticRule.h"
 
 CGColleV1File::CGColleV1File(const QString &path) :
-    m_device(new QFile(path))
+    m_device(new QFile(path)) ,
+    m_dataStart(0) ,
+    m_dataLength(0) ,
+    m_metaStart(0) ,
+    m_metaLength(0)
 {
 
 }
@@ -155,6 +160,18 @@ bool CGColleV1File::scanMeta()
     return true;
 }
 
+template<class T>
+static bool readRule(const QString &matcher, QIODevice *device, QList<CGColleV1CompositeRule *> &rules)
+{
+    CGColleV1CompositeRule *rule = new T();
+    rule->setMatcher(matcher);
+    if (!rule->read(device)) {
+        return false;
+    }
+    rules << rule;
+    return true;
+}
+
 bool CGColleV1File::scanCompositeRules()
 {
     qint64 cprlStart = m_device->pos();
@@ -174,13 +191,14 @@ bool CGColleV1File::scanCompositeRules()
 
         if (type == CGColleV1CartesianProductRule::TYPE) {
             // Cartesian Product Rule
-            CGColleV1CompositeRule *rule = new CGColleV1CartesianProductRule();
-            rule->setMatcher(matcher);
-            if (!rule->read(m_device.data())) {
+            if (!readRule<CGColleV1CartesianProductRule>(matcher, m_device.data(), m_compositeRules)) {
                 return false;
             }
-
-            m_compositeRules << rule;
+        } else if (type == CGColleV1StaticRule::TYPE) {
+            // Static Rule
+            if (!readRule<CGColleV1StaticRule>(matcher, m_device.data(), m_compositeRules)) {
+                return false;
+            }
         } else {
             // Unknown rule
             // Skip all remaining CPRL chunk data
