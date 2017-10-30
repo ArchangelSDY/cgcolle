@@ -5,6 +5,9 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
+#include "CGColleV1CartesianProductRule.h"
+#include "CGColleV1StaticRule.h"
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -71,15 +74,20 @@ MainWindow::MainWindow(QWidget *parent) :
     // Composite rules tab
     connect(ui->listCompositeRules, &QListWidget::currentRowChanged,
             this, &MainWindow::showCompositeRule);
+    connect(ui->btnAddCompositeRule, &QPushButton::pressed,
+            this, &MainWindow::addCompositeRule);
+    connect(ui->btnRemoveCompositeRule, &QPushButton::pressed,
+            this, &MainWindow::removeCompositeRule);
     connect(ui->btnApplyCompositeRule, &QPushButton::pressed, [this](){
         int index = ui->listCompositeRules->currentRow();
         CGColleV1CompositeRule *rule = m_file->compositeRules()[index];
+
+        rule->setMatcher(ui->editMatcher->text());
+        ui->listCompositeRules->item(index)->setText(rule->matcher());
+
         rule->fromEditString(ui->editCompositeRule->toPlainText());
         ui->editCompositeRule->setPlainText(rule->toEditString());
     });
-
-
-
 
     // Temp
     CGColleV1File file("E:\\test.cgc");
@@ -105,11 +113,7 @@ void MainWindow::openFile()
         ui->listEntries->addItem(QString("(%1) %2").arg(i).arg(entries[i].name));
     }
 
-    ui->listCompositeRules->clear();
-    const QList<CGColleV1CompositeRule *> &compositeRules = m_file->compositeRules();
-    for (CGColleV1CompositeRule *rule : compositeRules) {
-        ui->listCompositeRules->addItem(rule->matcher());
-    }
+    showCompositeRulesList();
 }
 
 void MainWindow::saveFile()
@@ -154,10 +158,66 @@ void MainWindow::showEntry()
                                .arg(m_file->metaLength()));
 }
 
+void MainWindow::addCompositeRule()
+{
+    QMenu menu(this);
+
+#define DEFINE_MENU(name, type) \
+    menu.addAction(tr(name), [this](){ \
+        CGColleV1CompositeRule *rule = new type(); \
+        rule->setMatcher("*"); \
+        this->m_file->compositeRules() << rule; \
+        this->ui->listCompositeRules->addItem(rule->matcher()); \
+    });
+
+    DEFINE_MENU("Cartesian Product Rule", CGColleV1CartesianProductRule);
+    DEFINE_MENU("Static Rule", CGColleV1StaticRule);
+
+    menu.exec(ui->btnAddCompositeRule->mapToGlobal(ui->btnAddCompositeRule->rect().topRight()));
+}
+
+void MainWindow::removeCompositeRule()
+{
+    int index = ui->listCompositeRules->currentRow();
+    QList<CGColleV1CompositeRule *> &rules = m_file->compositeRules();
+    if (index < 0 || index >= rules.count()) {
+        return;
+    }
+
+    CGColleV1CompositeRule *rule = rules.takeAt(index);
+    delete rule;
+
+    QListWidgetItem *item = ui->listCompositeRules->currentItem();
+    ui->listCompositeRules->removeItemWidget(item);
+    delete item;
+}
+
+void MainWindow::showCompositeRulesList()
+{
+    ui->listCompositeRules->clear();
+    const QList<CGColleV1CompositeRule *> &compositeRules = m_file->compositeRules();
+    for (CGColleV1CompositeRule *rule : compositeRules) {
+        ui->listCompositeRules->addItem(rule->matcher());
+    }
+}
+
 void MainWindow::showCompositeRule()
 {
     int index = ui->listCompositeRules->currentRow();
     CGColleV1CompositeRule *rule = m_file->compositeRules()[index];
+
+    switch (rule->type()) {
+    case CGColleV1CartesianProductRule::TYPE:
+        ui->lblCompositeRuleType->setText(tr("Cartesian Product"));
+        break;
+    case CGColleV1StaticRule::TYPE:
+        ui->lblCompositeRuleType->setText(tr("Static"));
+        break;
+    default:
+        ui->lblCompositeRuleType->setText(tr("Unknown"));
+    }
+
+    ui->editMatcher->setText(rule->matcher());
     ui->editCompositeRule->setPlainText(rule->toEditString());
 }
 

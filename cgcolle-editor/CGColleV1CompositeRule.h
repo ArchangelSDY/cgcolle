@@ -9,6 +9,7 @@ class CGColleV1CompositeRule
 public:
     virtual ~CGColleV1CompositeRule();
 
+    virtual int type() const = 0;
     virtual bool read(QIODevice *device) = 0;
     virtual bool write(QIODevice *device) = 0;
     virtual QString toEditString() = 0;

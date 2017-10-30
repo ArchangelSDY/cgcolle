@@ -8,6 +8,11 @@ CGColleV1StaticRule::CGColleV1StaticRule()
 {
 }
 
+int CGColleV1StaticRule::type() const
+{
+    return CGColleV1StaticRule::TYPE;
+}
+
 bool CGColleV1StaticRule::read(QIODevice *device)
 {
     uint32_t count;
@@ -38,7 +43,7 @@ bool CGColleV1StaticRule::write(QIODevice *device)
     static const uint8_t type = CGColleV1StaticRule::TYPE;
     writeNumber(device, type);
 
-    uint8_t count = m_plans.count();
+    uint32_t count = m_plans.count();
     writeNumber(device, count);
 
     for (const auto &plan : m_plans) {

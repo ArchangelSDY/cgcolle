@@ -12,6 +12,7 @@ public:
 
     CGColleV1StaticRule();
 
+    virtual int type() const override;
     virtual bool read(QIODevice *device) override;
     virtual bool write(QIODevice *device) override;
     virtual QString toEditString() override;

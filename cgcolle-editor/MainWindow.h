@@ -25,7 +25,10 @@ private slots:
     void openFile();
     void saveFile();
     void showEntry();
+    void showCompositeRulesList();
     void showCompositeRule();
+    void addCompositeRule();
+    void removeCompositeRule();
     void syncTypeOffsetLayerId();
 
 private:

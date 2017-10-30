@@ -6,6 +6,11 @@ CGColleV1CartesianProductRule::CGColleV1CartesianProductRule()
 {
 }
 
+int CGColleV1CartesianProductRule::type() const
+{
+    return CGColleV1CartesianProductRule::TYPE;
+}
+
 bool CGColleV1CartesianProductRule::read(QIODevice *device)
 {
 #define readNumber(dst) \
