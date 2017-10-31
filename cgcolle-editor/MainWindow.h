@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <functional>
+
 #include <QMainWindow>
 #include <QScopedPointer>
 
@@ -29,9 +31,10 @@ private slots:
     void showCompositeRule();
     void addCompositeRule();
     void removeCompositeRule();
-    void syncTypeOffsetLayerId();
 
 private:
+    void syncFields(std::function<void(CGColleV1Entry &, const CGColleV1Entry &)> apply);
+
     Ui::MainWindow *ui;
     QScopedPointer<CGColleV1File> m_file;
 };

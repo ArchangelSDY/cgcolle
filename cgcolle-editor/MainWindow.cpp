@@ -18,7 +18,24 @@ MainWindow::MainWindow(QWidget *parent) :
     menuFile->addAction(tr("Open"), this, &MainWindow::openFile);
     menuFile->addAction(tr("Save"), this, &MainWindow::saveFile);
     QMenu *menuEdit = ui->menuBar->addMenu(tr("Edit"));
-    menuEdit->addAction(tr("Sync Type + Offset + LayerId"), this, &MainWindow::syncTypeOffsetLayerId);
+    menuEdit->addAction(tr("Sync Scene"), [this](){
+        this->syncFields([](CGColleV1Entry &entry, const CGColleV1Entry &srcEntry) {
+            entry.scene = srcEntry.scene;
+        });
+    });
+    menuEdit->addAction(tr("Sync LayerId"), [this](){
+        this->syncFields([](CGColleV1Entry &entry, const CGColleV1Entry &srcEntry) {
+            entry.layerId = srcEntry.layerId;
+        });
+    });
+    menuEdit->addAction(tr("Sync Type + Offset + LayerId"), [this](){
+        this->syncFields([](CGColleV1Entry &entry, const CGColleV1Entry &srcEntry) {
+            entry.type = srcEntry.type;
+            entry.offsetX = srcEntry.offsetX;
+            entry.offsetY = srcEntry.offsetY;
+            entry.layerId = srcEntry.layerId;
+        });
+    });
 
     ui->tabWidget->setTabText(0, tr("Meta"));
     ui->tabWidget->setTabText(1, tr("Composite Rules"));
@@ -38,12 +55,6 @@ MainWindow::MainWindow(QWidget *parent) :
         entry.type = (CGColleV1Entry::Type)type;
     });
 
-#define INIT_LINE_EDIT(field, fieldCap) \
-    connect(ui->edit##fieldCap, &QLineEdit::textEdited, [this](const QString &text){ \
-        GET_ENTRY \
-        entry.##field = text; \
-        ui->listEntries->currentItem()->setText(text); \
-    });
 #define INIT_LINE_EDIT_NUM(field, fieldCap, type) \
     connect(ui->edit##fieldCap, &QLineEdit::textEdited, [this](const QString &text){ \
         GET_ENTRY \
@@ -55,7 +66,10 @@ MainWindow::MainWindow(QWidget *parent) :
         entry.##field = (type)val; \
     });
 
-    INIT_LINE_EDIT(scene, Scene)
+    connect(ui->editScene, &QLineEdit::textEdited, [this](const QString &text){
+        GET_ENTRY
+        entry.scene = text;
+    });
     connect(ui->editName, &QLineEdit::textEdited, [this](const QString &text){
         GET_ENTRY
         entry.name = text;
@@ -101,6 +115,9 @@ MainWindow::~MainWindow()
 void MainWindow::openFile()
 {
     QString path = QFileDialog::getOpenFileName(this, tr("Open"), "F:\\", "*.cgc");
+    if (!QFile::exists(path)) {
+        return;
+    }
     m_file.reset(new CGColleV1File(path));
 
     if (!m_file->open()) {
@@ -148,7 +165,6 @@ void MainWindow::showEntry()
     ui->comboCompositionMethod->setCurrentIndex((int)entry.compositionMethod);
 
     QImage i = m_file->readImage(index);
-    qDebug() << i.isNull();
     ui->lblImage->setPixmap(QPixmap::fromImage(i));
 
     ui->statusBar->showMessage(QString("Data Start: %1, Data Length: %2, Meta Start: %3, Meta Length: %4")
@@ -236,7 +252,7 @@ void MainWindow::keyPressEvent(QKeyEvent *ev)
     }
 }
 
-void MainWindow::syncTypeOffsetLayerId()
+void MainWindow::syncFields(std::function<void(CGColleV1Entry &, const CGColleV1Entry &)> apply)
 {
     QList<QListWidgetItem *> selectedEntryItems = ui->listEntries->selectedItems();
     if (selectedEntryItems.count() <= 1) {
@@ -249,9 +265,6 @@ void MainWindow::syncTypeOffsetLayerId()
     for (int i = 1; i < selectedEntryItems.count(); i++) {
         int index = ui->listEntries->row(selectedEntryItems[i]);
         CGColleV1Entry &entry = m_file->entrys()[index];
-        entry.type = srcEntry.type;
-        entry.offsetX = srcEntry.offsetX;
-        entry.offsetY = srcEntry.offsetY;
-        entry.layerId = srcEntry.layerId;
+        apply(entry, srcEntry);
     }
 }
